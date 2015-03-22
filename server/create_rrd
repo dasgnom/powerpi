@@ -1,0 +1,7 @@
+rrdtool create power2.rrd \
+--step '5' \
+'DS:power:GAUGE:90:U:U' \
+'RRA:AVERAGE:0.5:1:720' \
+'RRA:AVERAGE:0.5:6:1440' \
+'RRA:AVERAGE:0.5:6:2880' \
+'RRA:AVERAGE:0.5:12:10080'
