@@ -1,7 +1,8 @@
-#!/usr/bin/python
+#/usr/bin/python
 
 import RPi.GPIO as GPIO
 import time
+import requests
 
 # set gpio port numeration to bcm style
 GPIO.setmode(GPIO.BCM)
@@ -16,21 +17,22 @@ lpower = 10000
 #start busy loop
 while True:
 	#wait for a falling edge on gpio 24
-	GPIO.wait_for_edge(24, GPIO.FALLING)
+	#GPIO.wait_for_edge(24, GPIO.FALLING)
+	time.sleep(2)
 	
 	#get current time and calculate current power from difference
 	current = time.time()
 	diff = current - last
 	power = 1800 / diff
+	
 
 	#write into logfile
-	logfile = open("/srv/powerpi/power.out", "w+", 0)
-	if (power < lpower + 1500):
+	if (power < lpower + 3500):
 		out = str(current) + ";" + str(round(power,0))	
 	else:
 		out = str(current) + ";0"
-	logfile.write(out)
-	logfile.close()
+	payload = {"val": out}
+	r = requests.post("https://strom.ccc-ffm.de/test.php", data=payload, verify=False)
 	lpower = power
 	last = current
 GPIO.cleanup()
