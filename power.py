@@ -18,7 +18,6 @@ lpower = 10000
 while True:
 	#wait for a falling edge on gpio 24
 	#GPIO.wait_for_edge(24, GPIO.FALLING)
-	time.sleep(2)
 	
 	#get current time and calculate current power from difference
 	current = time.time()
