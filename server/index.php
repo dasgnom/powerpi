@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <title>Stromverbrauch HQ</title>
-    <link rel="icon" type="image/png" href="/png.ico">
+    <link rel="icon" type="image/png" href="/favicon.png">
 <?php if (! isset($_GET['norefresh']) || $_GET['norefresh'] != 1): ?>
 	<meta http-equiv="refresh" content="15">
 <?php endif; ?>
