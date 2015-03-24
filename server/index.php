@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <title>Stromverbrauch HQ</title>
-<?php $_GET['norefresh']=0; if (! isset($_GET['norefresh']) || $_GET['norefresh'] != 1): ?>
+<?php if (! isset($_GET['norefresh']) || $_GET['norefresh'] != 1): ?>
 	<meta http-equiv="refresh" content="15">
 <?php endif; ?>
 	<style type="text/css">
