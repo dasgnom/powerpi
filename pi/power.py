@@ -42,14 +42,20 @@ def readgpio():
 		print("start readgpio mainloop")
 	while True:
 		gpioevent = gpiopoll.poll()
-		gpio.read()
+		gpioval = gpio.read(1)
 		gpio.seek(0)
-		now = time.time()
-		power = round(1800 / (now-last),2)
-		if sys.stdout.isatty():
-			print("Current power consumption: " + str(power) + " Watt")
-		powerqueue.put([now, power])
-		last = now
+		if gpioval == '0':
+			now = time.time()
+			if ((now-last) >= 0.2):
+				power = round(1800 / (now-last),2)
+				if sys.stdout.isatty():
+					print("Current power consumption: " + str(power) + " Watt")
+					print(repr(gpioval))
+				powerqueue.put([now, power])
+				last = now
+		else:
+			if sys.stdout.isatty():
+				print("ERROR: not a falling edge! Ignoring interrupt")
 
 if __name__ == "__main__":
 	try:
