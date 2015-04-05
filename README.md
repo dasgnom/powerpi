@@ -1,0 +1,18 @@
+# POWERPI
+Logs the electric energy consumption in the hq with the power of a raspberry and a flying circus.
+
+## Bestandteile
+Das Setup besteht aus zwei Bestandteilen. Der eine läuft auf einem RasPi der im Sicherungskasten im HQ hängt und die Impulse vom Stromzähler abgreift. Der Andere Teil läuft auf unserem Server, auf der VM mtbf. Dieser Teil nimmt die Rohdaten vom RasPi entgegen, schreibt sie in eine RRD und erzeugt einmal in der Minute hypsche Bilder daraus.
+
+## Installation
+
+### Raspberry Pi
+Inhalt des Unterordners *pi* auf einen RasPi kopieren, auf dem ein Raspbian läuft. Das Script *power.py* muss in den Ordner /srv/powerpi und das Script *powerpi* in den Ordner /etc/init.d/ kopieren.
+Das Script `/srv/powerpi/power.py` muss für root ausführbar sein.
+
+#### AutoStart 
+
+Damit der Daemon automatisch gestartet wird muss der Befehl `insserv -d /etc/init.d/powerpi` als root ausgeführt werden.
+
+### Server
+Auf dem Webserver muss das Script *get.php* erreichbar sein. 
