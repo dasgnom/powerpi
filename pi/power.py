@@ -13,13 +13,13 @@ def trans():
 	queuelast = time.time()
 	while True:
 		queuedata = powerqueue.get()
-		queuetime = queuedata[0]
+		queuetime = int(queuedata[0])
 		queueval = str(queuedata[1])
 		if ((queuetime - queuelast) >= 5):
-			payload = "val:" + str(queuetime) + ";" + queueval
+			payload =  {"val": str(queuetime) + ";" + str(queueval)}
 			if sys.stdout.isatty():
-				print("request https://strom.ccc-ffm.de:2342/gettest.php => "+payload)
-			r = requests.post("https://strom.ccc-ffm.de:2342/gettest.php", data=payload, verify=False, auth=('CCC', 'Freundschaft'))
+				print("request https://strom.ccc-ffm.de:2342/get.php => "+repr(payload))
+			r = requests.post("https://strom.ccc-ffm.de:2342/get.php", data=payload, verify=False, auth=('CCC', 'Freundschaft'))
 			if sys.stdout.isatty():
 				print(r)
 			queuelast = queuetime
