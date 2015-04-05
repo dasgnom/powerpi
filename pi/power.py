@@ -1,169 +1,81 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-import time
-import requests
-import signal
+from select import poll, POLLPRI, POLLIN, POLLERR
 import sys
+import os
 import threading
-import random
-import logging
+import time
+import queue
+import requests
 
-#initialise some startup values
-last = time.time()
-current = time.time()
-lpower = 10000
-power = 0
-thGpioExit = False
-thTranExit = False
-debug = False
-server = "https://strom.ccc-ffm.de"
-doMeasurement = None
-doTransfer = None
-simulation = False
 
-def measure():
-	GPIO.wait_for_edge(24, GPIO.FALLING)
-
-def simulate(data=None):
-	if data == None:
-		time.sleep(random.randrange(1, 20, 1)/10)
-	else:
-		time.sleep(1)
-		
-def transSimulate(data=None):
-		time.sleep(random.randrange(1, 20, 1)/10)
-		return("HTTP 1.0 - 200")
-
-def transfer(data):
-	r = requests.post(server, data=data, verify=False)
-	if debug:
-		return(r)
-
-#define function trapping the gpio interrupts
-def trapGpio():
-	global last
-	global current
-	global power
+def trans():
+	queuelast = time.time()
 	while True:
-		#wait for a falling edge on gpio 24
-		doMeasurement()
-		
-		#get current time and calculate current power from difference
-		current = time.time()
-		diff = current - last
-		power = 1800 / diff
-		if debug:
-			logging.debug("current power: " + str(power))
-		if thGpioExit:
-			break
-		last = current
+		queuedata = powerqueue.get()
+		queuetime = queuedata[0]
+		queueval = str(queuedata[1])
+		if ((queuetime - queuelast) >= 5):
+			payload = "val:" + str(queuetime) + ";" + queueval
+			if sys.stdout.isatty():
+				print("request https://strom.ccc-ffm.de:2342/gettest.php => "+payload)
+			r = requests.post("https://strom.ccc-ffm.de:2342/gettest.php", data=payload, verify=False, auth=('CCC', 'Freundschaft'))
+			if sys.stdout.isatty():
+				print(r)
+			queuelast = queuetime
 			
-# define function transfering the measurments to our webserver
-def powerTran(once=False):
-	while True:
-		if not once:
-			time.sleep(5)
-		out = str(int(current)) + ";" + str(round(power,0))
-		payload = {"val": out}
-		logging.debug("request: " + server + " => "+ out)
-		transStatus = doTransfer(payload)
-		if simulation:
-			logging.debug("result: HTTP1.0:200")
-		else:
-			logging.debug(transStatus)
-		if once:
-			break
-		if thTranExit:
-			break
 
-def sigtermHandler(signal, stack):
-	if signal == 2:
-		signal = "SIGINT"
-	elif signal == 15:
-		signal = "SIGTERM"
-
-	logging.info("Signal '%s' received", signal)
-	logging.info("--- powerpi schutdown invoked ---")
-	global th1, th2, thTranExit, thGpioExit
-	thGpioExit = True
-	th1.join()
-	thTranExit = True
-	if not simulation:		
-		GPIO.cleanup()
-	logging.info("--- powerpi shutdown completed ---")
-	sys.exit(0)
-
-
-
-def initPowerPi():
-	global last, debug, doMeasurement, doTransfer, simulation
-
-	#checking for debugging mode flag
-	if "-d" in sys.argv:
-		debug=True
-		logging.basicConfig(level = logging.DEBUG, format = '%(asctime)s - %(levelname)8s - %(message)s')
-	else:
-		logging.basicConfig(filename = '/var/log/powerpi.log', level = logging.INFO, format = '%(asctime)s - %(levelname)8s - %(message)s')
-		
-	logging.info("--- starting powerpi ---")
-	
-	#checking for simulation mode flag
-	if "-s" in sys.argv:
-		logging.info("But it's just a SIMULATION!")
-		simulation = True
-		doMeasurement = simulate
-		doTransfer = simulate
-	else:
-		doMeasurement = measure
-		doTransfer = transfer
-		try:
-			import RPi.GPIO as GPIO
-		except:
-			logging.critical("Module GPIO not found ... Abort!")
-			sys.exit(1)
-			
-		# set gpio port numeration to bcm style
-		GPIO.setmode(GPIO.BCM)
-		
-		#initialise gpio on pi 24 as input with an pull_up resistor
-		GPIO.setup(24, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-	
-	#wait for two interrupts to obtain "clean" data
-	for i in range(2):
-		doMeasurement()	
-		logging.debug("waiting for 2 interrupts ...   [ %s seen ] " % (i))
-	logging.debug("waiting for 2 interrupts ...   [ %s seen ] " % (2))
-
+def readgpio():
+	gpio = open("/sys/class/gpio/gpio24/value", "r")
+	gpiopoll = poll()
+	gpiopoll.register(gpio, POLLERR)
+	if sys.stdout.isatty():
+		print("wait for 2 interrupts...")
+	gpioevent = gpiopoll.poll()
+	gpio.read()
+	gpio.seek(0)
 	last = time.time()
+	gpioevent = gpiopoll.poll()
+	gpio.read()
+	gpio.seek(0)
+	if sys.stdout.isatty():
+		print("start readgpio mainloop")
+	while True:
+		gpioevent = gpiopoll.poll()
+		gpio.read()
+		gpio.seek(0)
+		now = time.time()
+		power = round(1800 / (now-last),2)
+		if sys.stdout.isatty():
+			print("Current power consumption: " + str(power) + " Watt")
+		powerqueue.put([now, power])
+		last = now
 
-	global th1, th2
+if __name__ == "__main__":
+	try:
+		if not os.path.exists("/sys/class/gpio/gpio24"):
+			gpioinit = open("/sys/class/gpio/export", "w") 
+			gpioinit.write("24\n")
+			gpioinit.close()
+		gpiopin = open("/sys/class/gpio/gpio24/direction", "w")
+		gpiopin.write("in")
+		gpiopin.close()
+		gpiotype = open("/sys/class/gpio/gpio24/edge", "w")
+		gpiotype.write("falling")
+		gpiotype.close()
+	except:
+		sys.stderr.write("can't initialize gpio interface\n")
+		sys.stderr.flush()
+		sys.exit(1)
+
+	powerqueue = queue.Queue()
 	
-	#initialise threads waiting fpr gpio interrupts and tansfering power data
-	logging.debug("starting thread trapGpio")
-	th1=threading.Thread(target=trapGpio)
-	logging.debug("starting thread powerTran")
-	th2=threading.Thread(target=powerTran)
-	
-	#daemonize these threads
+	th1 = threading.Thread(target=readgpio)
+	th2 = threading.Thread(target=trans)
 	th1.setDaemon(True)
 	th2.setDaemon(True)
-
-	#start these threads
 	th1.start()
-	th2.start()	
+	th2.start()
 	
-	logging.info("start up completed - entering logging mode")
-	
-	
-if __name__ == "__main__":
-
-	# setting up signal trapping for SIGINT and SIGTERM
-	signal.signal(signal.SIGTERM, sigtermHandler)
-	signal.signal(signal.SIGINT, sigtermHandler)
-	
-	# call initialising function
-	initPowerPi()
-
-	# busyloop
 	while True:
-		raw_input("")
+		time.sleep(1)
