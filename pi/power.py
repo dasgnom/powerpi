@@ -26,23 +26,25 @@ def trans():
 			
 
 def readgpio():
-	gpio = open("/sys/class/gpio/gpio24/value", "r")
-	gpiopoll = poll()
-	gpiopoll.register(gpio, POLLERR)
-	if sys.stdout.isatty():
-		print("wait for 2 interrupts...")
-	gpioevent = gpiopoll.poll()
-	gpio.read()
-	gpio.seek(0)
-	last = time.time()
-	gpioevent = gpiopoll.poll()
-	gpio.read()
-	gpio.seek(0)
-	if sys.stdout.isatty():
-		print("start readgpio mainloop")
-	while True:
-		gpioevent = gpiopoll.poll()
-		gpioval = gpio.read(1)
+    gpio = open("/sys/class/gpio/gpio24/value", "r")                                                                                                                                                   
+    gpiopoll = poll()
+    gpiopoll.register(gpio, POLLERR)                                                                                                                                                                   
+    if sys.stdout.isatty():                                                                                                                                                                            
+        print("wait for 2 interrupts...")                                                                                                                                                          
+    gpioevent = gpiopoll.poll()                                                                                                                                                                        
+    gpio.read()                                                                                                                                                                                        
+    gpio.seek(0)                                                                                                                                                                                       
+    if sys.stdout.isatty():                                                                                                                                                                            
+        print("wait for 1 interrupt....")                                                                                                                                                          
+    gpioevent = gpiopoll.poll()                                                                                                                                                                        
+    last = time.time()                                                                                                                                                                                 
+    gpio.read()                                                                                                                                                                                        
+    gpio.seek(0)                                                                                                                                                                                       
+    if sys.stdout.isatty():                                                                                                                                                                            
+        print("start readgpio mainloop")
+    while True:
+	    gpioevent = gpiopoll.poll()
+	    gpioval = gpio.read(1)
 		gpio.seek(0)
 		if gpioval == '0':
 			now = time.time()
