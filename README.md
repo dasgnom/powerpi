@@ -35,4 +35,64 @@ Das Script `/srv/powerpi/power.py` muss für root ausführbar sein.
 Damit der Daemon automatisch gestartet wird muss der Befehl `insserv -d /etc/init.d/powerpi` als root ausgeführt werden.
 
 ### Server
-Auf dem Webserver muss das Script *get.php* erreichbar sein. 
+In diesem Beispiel liegen die Daten auf dem Webserver unter  `/srv/powerpi/`
+
+Auf dem Webserver muss das Script *get.php* sowie *index.php* und *\*.png* erreichbar sein. Die Datei `get.php` muss ausschließlich für den RaspberryPi erreichbar sein, die index.php und die generierten *.png für jeden der sich den Stromverbauch anschauen darf. 
+
+#### Apache Config für passenden vhost
+
+Ich gehe davon aus, dass für das Strommonitoring eine eigenen Subdomain verwedent wird, die nur über https erreichbar ist und für das für die ssl Verbindung ein von *cacert* signiertes Zertifikat verwendet wird.
+
+    <IfModule mod_ssl.c>
+    <VirtualHost *:443>
+	ServerAdmin webmaster@example.com
+	ServerName strom.example.com
+	
+	DocumentRoot /srv/hqsatellite/strom/
+	<Directory />
+		Options FollowSymLinks
+		AllowOverride None
+	</Directory>
+	<Directory /srv/powerpi/>
+		Options Indexes FollowSymLinks MultiViews
+		AllowOverride AuthConfig
+		Order allow,deny
+		allow from all
+	</Directory>
+
+	ErrorLog ${APACHE_LOG_DIR}/error.log
+	LogLevel notice 
+	CustomLog ${APACHE_LOG_DIR}/ssl_access.log combined
+	SSLEngine on
+
+	SSLCertificateFile    /etc/ssl/certs/cert.crt
+	SSLCertificateKeyFile /etc/ssl/private/cert.key
+
+	SSLCertificateChainFile /etc/ssl/certs/class3.crt
+
+	#SSLOptions +FakeBasicAuth +ExportCertData +StrictRequire
+	<FilesMatch "\.(cgi|shtml|phtml|php)$">
+		SSLOptions +StdEnvVars
+	</FilesMatch>
+    </VirtualHost>
+    </IfModule>
+
+#### cronjob
+
+der Cronjob wird jeden Minute aufgerufen und erzeugt jeweils die aktuellen Kurven aus rrd heraus.
+
+    * * * * * /srv/powerpi/rrd.sh > /dev/null 2>&1
+
+## TODO
+
+  - config Datei für power.py
+      - wird ssl genutzt, oder nicht, http-basic-auth (ja/nein), wenn ja: Zugangsdaten
+      - "rrd"-Server
+  - .htaccess Setup (mindestens erklären wie man es einrichtet)
+  - leere power.rrd
+    - rrd gen-script für ein Jahr ohne Datenverlust; aber nur ein rra
+  - rrd für den Apachen unzugänglich ablegen
+  - Schritt-für-Schritt Anleitung (vielleicht)
+
+Hier o
+   
