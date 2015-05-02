@@ -7,9 +7,19 @@ import threading
 import time
 import queue
 import requests
-
+import configparser
 
 def trans():
+	global serverconf
+	# build together url and headers
+	uri = ""
+	if serverconf.getboolean("ssl") == True:
+		uri = "https://"
+	else:
+		uri = "http://"
+	uri = uri + serverconf["url"] + "/get.php"
+	if sys.stdout.isatty():
+		print("Remote URI: " + uri)
 	queuelast = time.time()
 	while True:
 		# get value from queue (blocking)
@@ -22,15 +32,21 @@ def trans():
 			# put payload together
 			payload =  {"val": str(queuetime) + ";" + str(queueval)}
 			if sys.stdout.isatty():
-				print("request https://strom.ccc-ffm.de:2342/get.php => "+repr(payload))
+				print("request " + uri + " => "+repr(payload))
 			# send to webserver via http post
+			#
+			# Um den Krempel hier muss noch mal eine While Schleife rum, damit die Daten nicht verloren gehen.
+			#
 			try:
-				r = requests.post("https://strom.ccc-ffm.de:2342/get.php", data=payload, verify=False, auth=('CCC', 'Freundschaft'), timeout=10, headers={'connection':'close'})
+				if serverconf.getboolean("basicauth") == True:
+					r = requests.post(uri, data=payload, verify=False, auth=(serverconf["user"], serverconf["password"]), timeout=10, headers={'connection':'close'})
+				else:
+					r = requests.post(uri, data=payload, verify=False, timeout=10, headers={'connection':'close'})
 			except:
-				# some exception handling needed
-				pass		
-			if sys.stdout.isatty():
-				print("server response: " + str(r.status_code))
+				print("Exception raised!")
+			else:		
+				if sys.stdout.isatty():
+					print("server response: " + str(r.status_code))
 			queuelast = queuetime
 		
 		else:
@@ -40,8 +56,11 @@ def trans():
 				print("Drop queued element")
 
 def readgpio():
+	global gpiopath
+	global gpioconf
+	global smconf
 	# open gpio filehandle
-	gpio = open("/sys/class/gpio/gpio24/value", "r")
+	gpio = open(gpiopath + "value", "r")
 	# setup polling
 	gpiopoll = poll()
 	gpiopoll.register(gpio, POLLERR)
@@ -70,9 +89,9 @@ def readgpio():
 		if gpioval == '0':
 			now = time.time()
 			# plausibility check
-			if ((now-last) >= 0.2):
+			if ((now-last) >= gpioconf.getfloat("mintime")):
 				# calculate current power consumption
-				power = round(1800 / (now-last),2)
+				power = round((3600000/smconf.getint("impkwh")) / (now-last),2)
 				if sys.stdout.isatty():
 					print("Current power consumption: " + str(power) + " Watt")
 					print("GPIO state: " + gpioval)
@@ -86,19 +105,30 @@ def readgpio():
 
 
 if __name__ == "__main__":
+	# read config
+	conf = configparser.ConfigParser()
+	conf.read("powerpi.conf")
+	conf.sections()
+	gpioconf = conf['gpio']
+	serverconf = conf['server']
+	smconf = conf['smartmeter']
+	if serverconf["url"] == "power.example.com":
+		print("FATAL: configuration not adapted! Aborting!")
+		exit(1)
+	gpiopath = "/sys/class/gpio/gpio" + gpioconf["port"] + "/"
 	# initialise gpio interfaces
 	try:
-		if not os.path.exists("/sys/class/gpio/gpio24"):
-			# if not already exported, export gpio 24
+		if not os.path.exists(gpiopath):
+			# if not already exported, export gpio port
 			gpioinit = open("/sys/class/gpio/export", "w") 
-			gpioinit.write("24\n")
+			gpioinit.write(gpioconf["port"] + "\n")
 			gpioinit.close()
-		# set direction of gpio 24 to "IN"
-		gpiopin = open("/sys/class/gpio/gpio24/direction", "w")
+		# set direction of gpio port to "IN"
+		gpiopin = open(gpiopath + "direction", "w")
 		gpiopin.write("in")
 		gpiopin.close()
 		# set trigger to falling edge
-		gpiotype = open("/sys/class/gpio/gpio24/edge", "w")
+		gpiotype = open(gpiopath + "edge", "w")
 		gpiotype.write("falling")
 		gpiotype.close()
 	except:
@@ -110,7 +140,8 @@ if __name__ == "__main__":
 	powerqueue = queue.Queue()
 
 	# disable ssl "no verification" warnings
-	requests.packages.urllib3.disable_warnings()
+	if serverconf.getboolean("sslself") == True:
+		requests.packages.urllib3.disable_warnings()
 	
 	# initialising and starting threads
 	th1 = threading.Thread(target=readgpio)

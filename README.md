@@ -13,7 +13,7 @@ Logs the electric energy consumption in the hq with the power of a raspberry and
 #### RaspberryPi
   * Raspbian 7.8
   * python 3.2
-    * requests >= 2.5
+    * requests >= 2.5 (installierbar via pip)
 
 #### Server
   * Apache >= 2.2
@@ -46,9 +46,9 @@ Ich gehe davon aus, dass für das Strommonitoring eine eigenen Subdomain verwede
     <IfModule mod_ssl.c>
     <VirtualHost *:443>
 	ServerAdmin webmaster@example.com
-	ServerName strom.example.com
+	ServerName power.example.com
 	
-	DocumentRoot /srv/hqsatellite/strom/
+	DocumentRoot /srv/powerpi/
 	<Directory />
 		Options FollowSymLinks
 		AllowOverride None
@@ -85,14 +85,13 @@ der Cronjob wird jeden Minute aufgerufen und erzeugt jeweils die aktuellen Kurve
 
 ## TODO
 
-  - config Datei für power.py
-      - wird ssl genutzt, oder nicht, http-basic-auth (ja/nein), wenn ja: Zugangsdaten
-      - "rrd"-Server
+  - ✔ - config Datei für power.py
+      - ✔ - wird ssl genutzt, oder nicht, http-basic-auth (ja/nein), wenn ja: Zugangsdaten
+      - ✔ - "rrd"-Server
   - .htaccess Setup (mindestens erklären wie man es einrichtet)
   - leere power.rrd
     - rrd gen-script für ein Jahr ohne Datenverlust; aber nur ein rra
   - rrd für den Apachen unzugänglich ablegen
   - Schritt-für-Schritt Anleitung (vielleicht)
-
-Hier o
-   
+  - Schleife zum für den erneuten Senderversuch wenn der Server nicht erreichbar ist
+    - wie lange soll es erneut versucht werden?
