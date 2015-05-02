@@ -26,6 +26,9 @@ Das Setup besteht aus zwei Bestandteilen. Der eine läuft auf einem RasPi der im
 
 ## Installation
 
+### Hardwareverdrahtung
+![Verdrahtung RespberryPi / SmartMeter](doc/powerpi_wiring.svg "Verdrahtung RespberryPi / SmartMeter")
+
 ### Raspberry Pi
 Inhalt des Unterordners *pi* auf einen RasPi kopieren, auf dem ein Raspbian läuft. Das Script *power.py* muss in den Ordner /srv/powerpi und das Script *powerpi* in den Ordner /etc/init.d/ kopieren.
 Das Script `/srv/powerpi/power.py` muss für root ausführbar sein.
