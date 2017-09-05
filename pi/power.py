@@ -8,6 +8,7 @@ import time
 import queue
 import requests
 import configparser
+import logging
 
 def trans():
 	global serverconf
@@ -18,8 +19,7 @@ def trans():
 	else:
 		uri = "http://"
 	uri = uri + serverconf["url"] + "/get.php"
-	if sys.stdout.isatty():
-		print("Remote URI: " + uri)
+	log.info('Remote URI: {}'.format(uri))
 	queuelast = time.time()
 	while True:
 		# get value from queue (blocking)
@@ -31,8 +31,7 @@ def trans():
 		if ((queuetime - queuelast) >= 5):
 			# put payload together
 			payload =  {"val": str(queuetime) + ";" + str(queueval)}
-			if sys.stdout.isatty():
-				print("request " + uri + " => "+repr(payload))
+			log.debug('request {} => {}'.format(uri, repr(payload)))
 			# send to webserver via http post
 			#
 			# Um den Krempel hier muss noch mal eine While Schleife rum, damit die Daten nicht verloren gehen.
@@ -43,17 +42,13 @@ def trans():
 				else:
 					r = requests.post(uri, data=payload, verify=False, timeout=10, headers={'connection':'close'})
 			except:
-				print("Exception raised!")
-			else:		
-				if sys.stdout.isatty():
-					print("server response: " + str(r.status_code))
+				log.error('server response: {}'.format(str(r.status_code)))
 			queuelast = queuetime
 		
 		else:
 			# drop data if less than five seconds passed since last event
 			del queuedata
-			if sys.stdout.isatty():
-				print("Drop queued element")
+			log.info('dropped queued element')
 
 def readgpio():
 	global gpiopath
@@ -66,21 +61,18 @@ def readgpio():
 	gpiopoll.register(gpio, POLLERR)
 	
 	# wait for two interrupts to have a "clean" starting point
-	if sys.stdout.isatty():
-		print("wait for 2 interrupts...")
+	log.info('waiting for 2 interrupts to get a clean start')
 	gpioevent = gpiopoll.poll()
 	gpio.read()
 	gpio.seek(0)
-	if sys.stdout.isatty():
-		print("wait for 1 interrupt....")
+	log.info('waiting for 1 interrupt to get a clean start...')
 	gpioevent = gpiopoll.poll()
 	last = time.time()
 	gpio.read()
 	gpio.seek(0)
 	
 	# start readgpio mainloop
-	if sys.stdout.isatty():
-		print("start readgpio mainloop")
+	log.info('start readgpio mainloop')
 	while True:
 		gpioevent = gpiopoll.poll()
 		gpioval = gpio.read(1)
@@ -92,16 +84,14 @@ def readgpio():
 			if ((now-last) >= gpioconf.getfloat("mintime")):
 				# calculate current power consumption
 				power = round((3600000/smconf.getint("impkwh")) / (now-last),2)
-				if sys.stdout.isatty():
-					print("Current power consumption: " + str(power) + " Watt")
-					print("GPIO state: " + gpioval)
+				log.info('Current power consumption: {} Watt'.format(str(power)))
+				log.debug('GPIO state: {}'.format(gpioval))
 				# put measured value on queue
 				powerqueue.put([now, power])
 				last = now
 		# error if a tty is connected and a raising edge was triggered
 		else:
-			if sys.stdout.isatty():
-				print("ERROR: not a falling edge! Ignoring interrupt")
+			log.debug('Not a falling edge, ignoring')
 
 
 if __name__ == "__main__":
@@ -112,8 +102,10 @@ if __name__ == "__main__":
 	gpioconf = conf['gpio']
 	serverconf = conf['server']
 	smconf = conf['smartmeter']
+	# configure logging
+	log = logging.getLogger(__name__)
 	if serverconf["url"] == "power.example.com":
-		print("FATAL: configuration not adapted! Aborting!")
+		log.critical('Server -> url still default value')
 		exit(1)
 	gpiopath = "/sys/class/gpio/gpio" + gpioconf["port"] + "/"
 	# initialise gpio interfaces
@@ -132,9 +124,7 @@ if __name__ == "__main__":
 		gpiotype.write("falling")
 		gpiotype.close()
 	except:
-		# if not able to initialise gpios: abort with error
-		sys.stderr.write("can't initialize gpio interface\n")
-		sys.stderr.flush()
+		log.critical('can not initialize gpio interface. aborting.')
 		sys.exit(1)
 	# defining queue for measured values
 	powerqueue = queue.Queue()
