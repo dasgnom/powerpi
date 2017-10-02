@@ -5,3 +5,5 @@
 __pychache__
 .pyc
 
+# local config
+powerpi.local.conf
