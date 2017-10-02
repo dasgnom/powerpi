@@ -1,0 +1,12 @@
+# Systemd unit file for powerpi
+
+[Unit]
+Description=PowerPi - Electric Energy Consumption Monitor
+Requires=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/srv/powerpi/power.py
+
+[Install]
+WantedBy=multi-user.target
