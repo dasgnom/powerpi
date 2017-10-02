@@ -146,6 +146,8 @@ if __name__ == "__main__":
 	# configure logging
 	log = logging.getLogger(__name__)
 	log.setLevel(logging.DEBUG)
+	ch = logging.StreamHandler()
+	ch.setLevel(logging.INFO)
 	log.info('Running in path {}'.format(dirname))
 	if serverconf["url"] == "power.example.com" and mqttconf['host'] == "power.example.com":
 		log.critical('Server/Broker -> url still default value')
