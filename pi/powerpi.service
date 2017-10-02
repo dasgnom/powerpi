@@ -6,7 +6,7 @@ Requires=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/srv/powerpi/power.py
+ExecStart=/srv/powerpi/pi/power.py
 
 [Install]
 WantedBy=multi-user.target
