@@ -133,9 +133,9 @@ if __name__ == "__main__":
 	dirname, filename = os.path.split(os.path.abspath(__file__))
 	conf = configparser.ConfigParser()
 	try:
-		conf.read(os.path.join([dirname, "powerpi.local.conf"]))
+		conf.read(os.path.join(dirname, "powerpi.local.conf"))
 	except:
-		conf.read(os.path.join([dirname, "powerpi.conf"]))
+		conf.read(os.path.join(dirname, "powerpi.conf"))
 		log.warning('using global config. Use powerpi.local.conf instead')
 	conf.sections()
 	transconf = conf['transport']
