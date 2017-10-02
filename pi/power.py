@@ -31,7 +31,10 @@ def trans_http():
 		# if more than five seconds passed since last event
 		if ((queuetime - queuelast) >= 5):
 			# put payload together
-			payload =  {"val": str(queuetime) + ";" + str(queueval)}
+			if serverconf.getboolean('timestamp'):
+				payload =  {"val": str(queuetime) + ";" + str(queueval)}
+			else:
+				payload =  {"val": str(queueval)}
 			log.debug('request {}:{}{} => {}'.format(mqttconf['host'], mqttconf['port'], mqttconf['topic'], repr(payload)))
 			# send to http server
 			try:
@@ -62,7 +65,10 @@ def trans_mqtt():
 		# if more than five seconds passed since last event
 		if ((queuetime - queuelast) >= 5):
 			# put payload together
-			payload =  str(queuetime) + ";" + str(queueval)
+			if mqttconf.getboolean('timestamp'):
+				payload = str(queuetime) + ";" + str(queueval)
+			else:
+				payload = str(queueval)
 			log.debug('mqtt {} => {}'.format(mqttconf['host'], repr(payload)))
 			# send to mqtt broker
 			try:
@@ -124,8 +130,13 @@ def readgpio():
 
 if __name__ == "__main__":
 	# read config
+	dirname, filename = os.path.split(os.path.abspath(__file__))
 	conf = configparser.ConfigParser()
-	conf.read("powerpi.conf")
+	try:
+		conf.read(os.path.join([dirname, "powerpi.local.conf"]))
+	except:
+		conf.read(os.path.join([dirname, "powerpi.conf"]))
+		log.warning('using global config. Use powerpi.local.conf instead')
 	conf.sections()
 	transconf = conf['transport']
 	gpioconf = conf['gpio']
@@ -135,6 +146,7 @@ if __name__ == "__main__":
 	# configure logging
 	log = logging.getLogger(__name__)
 	log.setLevel(logging.DEBUG)
+	log.info('Running in path {}'.format(dirname))
 	if serverconf["url"] == "power.example.com" and mqttconf['host'] == "power.example.com":
 		log.critical('Server/Broker -> url still default value')
 		exit(1)
