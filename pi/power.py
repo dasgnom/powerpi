@@ -62,8 +62,8 @@ def trans_mqtt():
 		# if more than five seconds passed since last event
 		if ((queuetime - queuelast) >= 5):
 			# put payload together
-			payload =  {"val": str(queuetime) + ";" + str(queueval)}
-			log.debug('mqtt {} => {}'.format(uri, repr(payload)))
+			payload =  str(queuetime) + ";" + str(queueval)
+			log.debug('mqtt {} => {}'.format(mqttconf['host'], repr(payload)))
 			# send to mqtt broker
 			try:
 				mqtt.single(mqttconf['topic'], payload=payload, retain=True, hostname=mqttconf['host'], 
@@ -134,6 +134,7 @@ if __name__ == "__main__":
 	mqttconf = conf['mqtt']
 	# configure logging
 	log = logging.getLogger(__name__)
+	log.setLevel(logging.DEBUG)
 	if serverconf["url"] == "power.example.com" and mqttconf['host'] == "power.example.com":
 		log.critical('Server/Broker -> url still default value')
 		exit(1)
