@@ -7,3 +7,6 @@ __pychache__
 
 # local config
 powerpi.local.conf
+
+# bargraph
+bargraph/
